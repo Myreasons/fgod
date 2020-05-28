@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import fgod as fg
 from datetime import datetime, date, time
-
+plt.style.use('fivethirtyeight')
 
 def P_clean(series,dater):
     bornline = dater-pd.offsets.Day(30)
@@ -20,7 +20,6 @@ def P_clean(series,dater):
     sm = pd.to_numeric(s['VOL_ACT'], errors='coerce').sum()
     sm = sm/i
     return sm
-
 
 def average_day(num,dater,series):
     bornline = dater - pd.offsets.Day(80)
@@ -50,7 +49,25 @@ def average_week_of_month(month_start, ws,wn):
     sm = sm / i
     #print(ws)
     return sm
+
 def last_day_of_month(date):
     if date.month == 12:
         return date.replace(day=31)
     return date.replace(month=date.month+1, day=1) - datetime.timedelta(days=1)
+
+def kdf(y):
+    test = sm.tsa.adfuller(y)
+    print('adf: ', test[0])
+    print('p-value: ', test[1])
+    print('Critical values: ', test[4])
+    if test[0] > test[4]['5%']:
+        rez = ('Есть единичные корни, ряд не стационарен')
+    else:
+        rez = ('Единичных корней нет, ряд стационарен')
+    y.plot(figsize=(15, 6), title= rez)
+    plt.show()
+    return(rez)
+
+def anti_stac(otg):
+    otg1diff = otg.diff(periods=1).dropna()
+    return (otg1diff)

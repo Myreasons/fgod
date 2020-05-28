@@ -6,7 +6,6 @@ import statsmodels.api as sm
 import matplotlib.pyplot as plt
 import fgod as fg
 import functions_analyse as fa
-#from datetime import datetime, date, time
 import datetime as dt
 import calendar
 
@@ -20,7 +19,7 @@ clean_meth = fg.isolation_forest_anomaly_detection
 y=clean_meth(df=fg.starter(), column_name='VOL_ACT')
 
 y.plot(figsize=(15, 6))
-#plt.show()
+plt.show()
 sz = 0
 
 
@@ -33,7 +32,7 @@ sz = 0
 while sz <= 6:
     dw_ind[sz]= dw_ind[sz]/dw_ind_avg
     sz+=1
-print(dw_ind)
+
 
 wm_ind=[0,0,0,0,0]
 szm = 0
@@ -49,11 +48,8 @@ while sz <= 4:
     sz+=1
 
 print(wm_ind)
-forecast_date_start = dt.datetime(2019,12,1)
+forecast_date_start = dt.datetime(2020,5,1)
 k=calendar.monthrange(forecast_date_start.year,forecast_date_start.month)
-
-
-
 
 forecast_month  = pd.DataFrame(index= pd.date_range(forecast_date_start, periods=k[1]).tolist() )
 forecast_month['week_num'] = (forecast_month.index.values)
@@ -61,15 +57,11 @@ forecast_month['week_num'] = forecast_month['week_num'].dt.day // 7 + 1
 forecast_month['week_day']=forecast_month.index.values
 forecast_month['week_day'] = forecast_month['week_day'].dt.dayofweek
 
-
-
-
-
 y = y['VOL_Clear'].resample('MS').sum()
-print(y)
 
-y.plot(figsize=(15, 6))
-plt.show()
+tester = fa.kdf(fa.anti_stac(y))
+#y_as = fa.anti_stac(y)
+y_as = y
 
 # Define the p, d and q parameters to take any value between 0 and 2
 p = d = q = range(0, 2)
@@ -86,17 +78,18 @@ print('SARIMAX: {} x {}'.format(pdq[1], seasonal_pdq[2]))
 print('SARIMAX: {} x {}'.format(pdq[2], seasonal_pdq[3]))
 print('SARIMAX: {} x {}'.format(pdq[2], seasonal_pdq[4]))
 
-warnings.filterwarnings("ignore") # specify to ignore warning messages
+warnings.filterwarnings("ignore")  # specify to ignore warning messages
 
 best_aic = 10000
 new_aic = 0
-best_param = (1,1,1)
-best_sparam = (1,1,12)
+best_param = (1, 1, 1)
+best_sparam = (1, 1, 12)
 
+#  Внимание! В цикле определяются pdq по лучшему AIC на основе y_as - попытка привести к стационарному ряду.
 for param in pdq:
    for param_seasonal in seasonal_pdq:
        try:
-           mod = sm.tsa.statespace.SARIMAX(y,
+           mod = sm.tsa.statespace.SARIMAX(y_as,
                                            order=param,
                                            seasonal_order=param_seasonal,
                                            enforce_stationarity=False,
@@ -113,10 +106,10 @@ for param in pdq:
        except:
            continue
 
-
 #(1,1,1)(1,1,1,12) заменены на best_ в соответствии со сравнением aic по наименьшему результату
 
 print('BEST ARIMA{}x{}12 - AIC:{}'.format(best_param, best_sparam, best_aic))
+
 mod = sm.tsa.statespace.SARIMAX(y,
                                order=best_param,
                                seasonal_order=best_sparam,
@@ -153,10 +146,10 @@ y_truth = y['2019':]
 mse = ((y_forecasted - y_truth) ** 2).mean()
 print('The Mean Squared Error of our forecasts is {}'.format(round(mse, 2)))
 
-pred_dynamic = results.get_prediction(start=pd.to_datetime('2019-01-01'), dynamic=True, full_results=True)
+pred_dynamic = results.get_prediction(start=pd.to_datetime('2020-01-01'), dynamic=True, full_results=True)
 pred_dynamic_ci = pred_dynamic.conf_int()
 
-ax = y['2017':].plot(label='observed', figsize=(20, 15))
+ax = y['2019':].plot(label='observed', figsize=(20, 15))
 pred_dynamic.predicted_mean.plot(label='Dynamic Forecast', ax=ax)
 
 ax.fill_between(pred_dynamic_ci.index,
@@ -197,20 +190,15 @@ ax.set_ylabel('VOL_Clear')
 plt.legend()
 plt.show()
 
-print('XAXAXAXAXAXAXAXAXXAXAXAXAXA')
 print(pred_ci)
-
-
-
 
 #а тут мои приколы
 
 month_vol_average = (pred_ci['lower VOL_Clear']+pred_ci['upper VOL_Clear'])/2
 mva = pd.to_numeric(month_vol_average.values, errors='coerce').sum()
 
-print('aaaaa')
 print(mva)
-print('aaaaa')
+
 forecast_month['Volume']= mva / len(forecast_month)
 
 forecast_month['week_day_ind']=1
@@ -225,3 +213,4 @@ forecast_month['Volume']=forecast_month['Volume']*forecast_month['week_day_ind']
 print(forecast_month)
 forecast_month.plot(figsize=(15, 6))
 plt.show()
+
