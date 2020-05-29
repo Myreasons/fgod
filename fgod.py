@@ -19,7 +19,6 @@ def starter():
     file = 'datas.xlsx'
     y = pd.read_excel(file, index_col=0)
     y = y.fillna(y.bfill())
-
     return y
 
 def cleaner():

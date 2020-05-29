@@ -55,7 +55,7 @@ def last_day_of_month(date):
         return date.replace(day=31)
     return date.replace(month=date.month+1, day=1) - datetime.timedelta(days=1)
 
-def kdf(y):
+def kdf(y, ttl):
     test = sm.tsa.adfuller(y)
     print('adf: ', test[0])
     print('p-value: ', test[1])
@@ -64,7 +64,7 @@ def kdf(y):
         rez = ('Есть единичные корни, ряд не стационарен')
     else:
         rez = ('Единичных корней нет, ряд стационарен')
-    y.plot(figsize=(15, 6), title= rez)
+    y.plot(figsize=(15, 6), title= rez + ': ' + ttl)
     plt.show()
     return(rez)
 
