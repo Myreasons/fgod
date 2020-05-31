@@ -30,8 +30,9 @@ def cleaner():
 """
 Простой фильтр нижних частот: взятие скользящего среднего и устранение аномалий на основе Z-показателя
 """
-def low_pass_filter_anomaly_detection(df,
+def low_pass_filter_anomaly_detection(event, df,
                                       column_name):
+
     """
     Implement a low-pass filter to detect anomalies in a time series, and save the filter outputs
     (True/False) to a new column in the dataframe.
@@ -60,18 +61,20 @@ def low_pass_filter_anomaly_detection(df,
                                 number_of_stdevs_away_from_mean*df[
                                 column_name+'_Rolling_StDev']))
     #df['Cleaned']=np.where(df['VOL_ACT_Low_Pass_Filter_Anomaly'] == True, datetime(2019,2,2),df['VOL_ACT'])
-    df['VOL_Clear']=df['VOL_ACT']
+    df['Clear '+column_name]=df[column_name]
     for ind in df.index.values:
         if df['Filter_Anomaly'].loc[ind]  == True:
-            df['VOL_Clear'].loc[ind] = fa.P_clean(df,ind)
+            df['Clear '+column_name].loc[ind] = fa.P_clean(df, ind, column_name)
+
+    df = df.drop([column_name+'_Rolling_StDev',column_name+'_Rolling_Average'], axis = 1)
 
 
-
+    print(df)
     return df
 
 """Изоляция Леса"""
 
-def isolation_forest_anomaly_detection(df,
+def isolation_forest_anomaly_detection(event, df,
                                        column_name):
     """
     In this definition, time series anomalies are detected using an Isolation Forest algorithm.
@@ -94,8 +97,10 @@ def isolation_forest_anomaly_detection(df,
     isolation_forest_anomaly_column = 'Filter_Anomaly'
     df[isolation_forest_anomaly_column] = model.predict(scaled_time_series)
     df[isolation_forest_anomaly_column] = df[isolation_forest_anomaly_column].map( {1: False, -1: True} )
-    df['VOL_Clear'] = df['VOL_ACT']
+    df['Clear '+column_name] = df[column_name]
     for ind in df.index.values:
         if df['Filter_Anomaly'].loc[ind]  == True:
-            df['VOL_Clear'].loc[ind] = fa.P_clean(df,ind)
+            df['Clear '+column_name].loc[ind] = fa.P_clean(df,ind,column_name)
+
+
     return df

@@ -14,34 +14,12 @@ import statistics
 measure = 'VOL_ACT'
 #measure = 'AHT_ACT'
 
-def forecast_gad(measure, count_of_forecast_steps = 1, clean_meth = fg.isolation_forest_anomaly_detection):
-    plt.style.use('fivethirtyeight')
-
-    if measure == 'VOL_ACT':
-        P_name = 'Входящие вызовы'
-    else:
-        P_name = 'AHT'
-
-    #clean_meth = fg.isolation_forest_anomaly_detection
-    # clean_meth = fg.low_pass_filter_anomaly_detection
-
-    y = clean_meth(df=fg.starter(), column_name=measure)
-
-    if measure == 'VOL_ACT':
-        y = y.drop(['AHT_ACT'], axis = 1)
-        y.plot(figsize=(15, 6), title = P_name)
-        plt.show()
+def dw_indexes(y, measure):
     sz = 0
-
-    if measure == 'AHT_ACT':
-        y1=y
-        y1['VOL_Clear']=y1['AHT_ACT']
-    else:
-        y1 = y
 
     dw_ind = [0, 0, 0, 0, 0, 0, 0]
     while sz <= 6:
-        dw_ind[sz] = fa.average_day_of_week(number=sz, df=y1, date_start=dt.datetime(2019, 5, 1))
+        dw_ind[sz] = fa.average_day_of_week(number=sz, df=y, date_start=dt.datetime(2019, 5, 1),ms=measure)
         sz += 1
     dw_ind_avg = sum(dw_ind) / len(dw_ind)
     sz = 0
@@ -49,10 +27,17 @@ def forecast_gad(measure, count_of_forecast_steps = 1, clean_meth = fg.isolation
         dw_ind[sz] = dw_ind[sz] / dw_ind_avg
         sz += 1
 
+
+
+
+
+    return(dw_ind)
+
+def wm_indexes(y, measure):
     wm_ind = [0, 0, 0, 0, 0]
     szm = 0
     while szm < 5:
-        wm_ind[szm] = fa.average_week_of_month(wn=szm, ws=y1, month_start=dt.datetime(2019, 12, 1))
+        wm_ind[szm] = fa.average_week_of_month(wn=szm, ws=y, month_start=dt.datetime(2019, 12, 1), ms = measure)
         szm += 1
 
     wm_ind_avg = sum(wm_ind) / len(wm_ind)
@@ -61,8 +46,34 @@ def forecast_gad(measure, count_of_forecast_steps = 1, clean_meth = fg.isolation
         wm_ind[sz] = wm_ind[sz] / wm_ind_avg
         sz += 1
 
+    '''
+    forecast_date_start = dt.datetime(2020, 5, 1)
+    k = calendar.monthrange(forecast_date_start.year, forecast_date_start.month)
+
+    forecast_month = pd.DataFrame(index=pd.date_range(forecast_date_start, periods=k[1]).tolist())
+    forecast_month['week_num'] = forecast_month.index.values
+    forecast_month['week_num'] = forecast_month['week_num'].dt.day // 7 + 1
+    forecast_month['week_day'] = forecast_month.index.values
+    forecast_month['week_day'] = forecast_month['week_day'].dt.dayofweek
+    '''
+    return(wm_ind)
+
+
+def forecast_gad(measure, dw_ind, wm_ind,y):
+    plt.style.use('fivethirtyeight')
 
     forecast_date_start = dt.datetime(2020, 5, 1)
+    count_of_forecast_steps = 1
+
+    k = calendar.monthrange(forecast_date_start.year, forecast_date_start.month)
+    forecast_month = pd.DataFrame(index=pd.date_range(forecast_date_start, periods=k[1]).tolist())
+    forecast_month['week_num'] = forecast_month.index.values
+    forecast_month['week_num'] = forecast_month['week_num'].dt.day // 7 + 1
+    forecast_month['week_day'] = forecast_month.index.values
+    forecast_month['week_day'] = forecast_month['week_day'].dt.dayofweek
+
+
+
     k = calendar.monthrange(forecast_date_start.year, forecast_date_start.month)
 
     forecast_month = pd.DataFrame(index=pd.date_range(forecast_date_start, periods=k[1]).tolist())
@@ -72,14 +83,14 @@ def forecast_gad(measure, count_of_forecast_steps = 1, clean_meth = fg.isolation
     forecast_month['week_day'] = forecast_month['week_day'].dt.dayofweek
 
 
-    if measure == 'VOL_ACT':
-        y = y['VOL_Clear'].resample('MS').sum()
+    if measure == 'Clear VOL_ACT':
+        y = y['Clear VOL_ACT'].resample('MS').sum()
     else:
-        y['VOL_Clear'] = y['VOL_ACT'] * y['AHT_ACT']
-        y = y['VOL_Clear'].resample('MS').sum()/y['VOL_ACT'].resample('MS').sum()
+        y['Clear AHT_ACT'] = y['Clear VOL_ACT'] * y['Clear AHT_ACT']
+        y = y['Clear AHT_ACT'].resample('MS').sum()/y['Clear VOL_ACT'].resample('MS').sum()
 
 
-    tester = fa.kdf(y,ttl = P_name)
+    tester = fa.kdf(y,ttl = measure)
     # y_as = fa.anti_stac(y)
     y_as = y
 
@@ -91,13 +102,13 @@ def forecast_gad(measure, count_of_forecast_steps = 1, clean_meth = fg.isolation
 
     # Generate all different combinations of seasonal p, q and q triplets
     seasonal_pdq = [(x[0], x[1], x[2], 12) for x in list(itertools.product(p, d, q))]
-
+    '''
     print('Examples of parameter combinations for Seasonal ARIMA...')
     print('SARIMAX: {} x {}'.format(pdq[1], seasonal_pdq[1]))
     print('SARIMAX: {} x {}'.format(pdq[1], seasonal_pdq[2]))
     print('SARIMAX: {} x {}'.format(pdq[2], seasonal_pdq[3]))
     print('SARIMAX: {} x {}'.format(pdq[2], seasonal_pdq[4]))
-
+    '''
     warnings.filterwarnings("ignore")  # specify to ignore warning messages
 
     best_aic = 10000
@@ -117,7 +128,7 @@ def forecast_gad(measure, count_of_forecast_steps = 1, clean_meth = fg.isolation
 
                 results = mod.fit()
 
-                print('ARIMA{}x{}12 - AIC:{}'.format(param, param_seasonal, results.aic))
+                #print('ARIMA{}x{}12 - AIC:{}'.format(param, param_seasonal, results.aic))
                 new_aic = results.aic
                 if new_aic <= best_aic:
                     best_param = param
@@ -128,7 +139,7 @@ def forecast_gad(measure, count_of_forecast_steps = 1, clean_meth = fg.isolation
 
     # (1,1,1)(1,1,1,12) заменены на best_ в соответствии со сравнением aic по наименьшему результату
 
-    print('BEST ARIMA{}x{}12 - AIC:{}'.format(best_param, best_sparam, best_aic))
+    #print('BEST ARIMA{}x{}12 - AIC:{}'.format(best_param, best_sparam, best_aic))
 
     mod = sm.tsa.statespace.SARIMAX(y,
                                     order=best_param,
@@ -138,15 +149,15 @@ def forecast_gad(measure, count_of_forecast_steps = 1, clean_meth = fg.isolation
 
     results = mod.fit()
 
-    print(results.summary().tables[1])
+    #print(results.summary().tables[1])
 
     # Этот метод очень привередлив к параметру lags. Установил как 6, но, мб придется изменить. Какой-то баг SARIMAX.
-    results.plot_diagnostics(figsize=(15, 12), lags=6)
-    plt.show()
+    #results.plot_diagnostics(figsize=(15, 12), lags=6)
+    #plt.show()
 
     pred = results.get_prediction(start=pd.to_datetime('2019-01-01'), dynamic=False)
     pred_ci = pred.conf_int()
-
+    '''
     ax = y['2017':].plot(label='observed')
     pred.predicted_mean.plot(ax=ax, label='One-step ahead Forecast', alpha=.7)
 
@@ -158,17 +169,18 @@ def forecast_gad(measure, count_of_forecast_steps = 1, clean_meth = fg.isolation
     ax.set_ylabel('VOL_Clear')
     plt.legend()
     # plt.show()
+    '''
 
     y_forecasted = pred.predicted_mean
     y_truth = y['2020':]
 
     # Compute the mean square error
     mse = ((y_forecasted - y_truth) ** 2).mean()
-    print('The Mean Squared Error of our forecasts is {}'.format((round(mse, 2))))
+    #print('The Mean Squared Error of our forecasts is {}'.format((round(mse, 2))))
 
     pred_dynamic = results.get_prediction(start=pd.to_datetime('2020-01-01'), dynamic=True, full_results=True)
     pred_dynamic_ci = pred_dynamic.conf_int()
-
+    '''
     ax = y['2019':].plot(label='observed', figsize=(20, 15))
     pred_dynamic.predicted_mean.plot(label='Dynamic Forecast', ax=ax)
 
@@ -184,6 +196,7 @@ def forecast_gad(measure, count_of_forecast_steps = 1, clean_meth = fg.isolation
 
     plt.legend()
     plt.show()
+    '''
 
     # Extract the predicted and true values of our time series
     y_forecasted = pred_dynamic.predicted_mean
@@ -193,14 +206,14 @@ def forecast_gad(measure, count_of_forecast_steps = 1, clean_meth = fg.isolation
     # mse = ((y_forecasted - y_truth) ** 2).mean()
     mse = statistics.stdev(y_forecasted - y_truth)
 
-    print('The Mean Squared Error of our forecasts is {}'.format((round(mse, 2))))
+    #print('The Mean Squared Error of our forecasts is {}'.format((round(mse, 2))))
 
     # Get forecast for some steps ahead in future
     pred_uc = results.get_forecast(steps=count_of_forecast_steps)
 
     # Get confidence intervals of forecasts
     pred_ci = pred_uc.conf_int()
-
+    '''
     ax = y.plot(label='observed', figsize=(20, 15))
     pred_uc.predicted_mean.plot(ax=ax, label='Forecast')
     ax.fill_between(pred_ci.index,
@@ -211,16 +224,18 @@ def forecast_gad(measure, count_of_forecast_steps = 1, clean_meth = fg.isolation
 
     plt.legend()
     plt.show()
+    '''
 
     # а тут мои приколы
-    if measure == 'VOL_ACT':
-        month_vol_average = (pred_ci['lower VOL_Clear'] + pred_ci['upper VOL_Clear']) / 2
+    if measure == 'Clear VOL_ACT':
+        month_vol_average = (pred_ci['lower Clear VOL_ACT'] + pred_ci['upper Clear VOL_ACT']) / 2
     else:
         month_vol_average = (pred_ci['lower y'] + pred_ci['upper y']) / 2
     mva = pd.to_numeric(month_vol_average.values, errors='coerce').sum()
 
 
-    if measure == "VOL_ACT":
+
+    if measure == "Clear VOL_ACT":
         forecast_month['Volume'] = mva / len(forecast_month)
     else:
         forecast_month['Volume'] = mva
@@ -235,14 +250,17 @@ def forecast_gad(measure, count_of_forecast_steps = 1, clean_meth = fg.isolation
     forecast_month['Volume'] = forecast_month['Volume'] * forecast_month['week_day_ind'] * forecast_month[
         'week_num_ind']
 
+
+
     forecast_month = forecast_month.drop(['week_num', 'week_day', 'week_day_ind', 'week_num_ind'], axis=1)
+    '''
     forecast_month.plot(figsize=(15, 6))
-
     plt.show()
+    '''
     return(forecast_month)
-
+'''
 F_Volume = forecast_gad('VOL_ACT')
 F_Aht = forecast_gad('AHT_ACT')
 F_Volume['AHT'] = F_Aht['Volume']
 print(F_Volume)
-
+'''

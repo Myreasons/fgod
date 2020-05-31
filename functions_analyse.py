@@ -8,7 +8,7 @@ import fgod as fg
 from datetime import datetime, date, time
 plt.style.use('fivethirtyeight')
 
-def P_clean(series,dater):
+def P_clean(series,dater, param):
     bornline = dater-pd.offsets.Day(30)
     deadline = dater+pd.offsets.Day(30)
     s=series.loc[bornline:deadline]
@@ -17,11 +17,11 @@ def P_clean(series,dater):
     s['weekday']=s['weekday'].dt.dayofweek
     s = s[lambda x: x['weekday'] == date.weekday(pd.Timestamp(dater))]
     i = len(s)
-    sm = pd.to_numeric(s['VOL_ACT'], errors='coerce').sum()
+    sm = pd.to_numeric(s[param], errors='coerce').sum()
     sm = sm/i
     return sm
 
-def average_day(num,dater,series):
+def average_day(num,dater,series, ms1):
     bornline = dater - pd.offsets.Day(80)
     deadline = dater - pd.offsets.Day(6)
     s = series.loc[bornline:deadline]
@@ -30,24 +30,23 @@ def average_day(num,dater,series):
     s['weekday']=s['weekday'].dt.dayofweek
     s = s[lambda x: x['weekday'] == num]
     i = len(s)
-    sm = pd.to_numeric(s['VOL_Clear'], errors='coerce').sum()
+    sm = pd.to_numeric(s[ms1], errors='coerce').sum()
     sm = sm/i
     return sm
 
-def average_day_of_week(number,df,date_start):
-    dw = average_day(num=number,dater=date_start, series= df)
+def average_day_of_week(number,df,date_start,ms):
+    dw = average_day(num=number,dater=date_start, series= df,ms1=ms)
     return dw
 
-def average_week_of_month(month_start, ws,wn):
+def average_week_of_month(month_start, ws,wn, ms):
     wn+=1
     ws = ws.loc[month_start:]
     ws['week_num'] = (ws.index.values)
     ws['week_num'] = ws['week_num'].dt.day // 7 + 1
     ws = ws[lambda x: x['week_num'] == wn]
     i = len(ws)
-    sm = pd.to_numeric(ws['VOL_Clear'], errors='coerce').sum()
+    sm = pd.to_numeric(ws[ms], errors='coerce').sum()
     sm = sm / i
-    #print(ws)
     return sm
 
 def last_day_of_month(date):
@@ -64,8 +63,8 @@ def kdf(y, ttl):
         rez = ('Есть единичные корни, ряд не стационарен')
     else:
         rez = ('Единичных корней нет, ряд стационарен')
-    y.plot(figsize=(15, 6), title= rez + ': ' + ttl)
-    plt.show()
+    #y.plot(figsize=(15, 6), title= rez + ': ' + ttl)
+    #plt.show()
     return(rez)
 
 def anti_stac(otg):
