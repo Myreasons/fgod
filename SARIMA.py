@@ -1,25 +1,22 @@
 import warnings
 import itertools
 import pandas as pd
-import numpy as np
 import statsmodels.api as sm
 import matplotlib.pyplot as plt
-import fgod as fg
 import functions_analyse as fa
 import datetime as dt
 import calendar
-import math as m
 import statistics
 
 measure = 'VOL_ACT'
 #measure = 'AHT_ACT'
 
-def dw_indexes(y, measure):
+def dw_indexes(y, measure,start_date):
     sz = 0
-
+    start_date = dt.datetime.strptime(start_date, '%Y-%m-%d').date()
     dw_ind = [0, 0, 0, 0, 0, 0, 0]
     while sz <= 6:
-        dw_ind[sz] = fa.average_day_of_week(number=sz, df=y, date_start=dt.datetime(2019, 5, 1),ms=measure)
+        dw_ind[sz] = fa.average_day_of_week(number=sz, df=y, date_start=start_date, ms=measure)
         sz += 1
     dw_ind_avg = sum(dw_ind) / len(dw_ind)
     sz = 0
@@ -33,11 +30,12 @@ def dw_indexes(y, measure):
 
     return(dw_ind)
 
-def wm_indexes(y, measure):
+def wm_indexes(y, measure, start_date):
+    start_date = dt.datetime.strptime(start_date, '%Y-%m-%d').date()
     wm_ind = [0, 0, 0, 0, 0]
     szm = 0
     while szm < 5:
-        wm_ind[szm] = fa.average_week_of_month(wn=szm, ws=y, month_start=dt.datetime(2019, 12, 1), ms = measure)
+        wm_ind[szm] = fa.average_week_of_month(wn=szm, ws=y, month_start=start_date, ms=measure)
         szm += 1
 
     wm_ind_avg = sum(wm_ind) / len(wm_ind)
@@ -59,10 +57,19 @@ def wm_indexes(y, measure):
     return(wm_ind)
 
 
-def forecast_gad(measure, dw_ind, wm_ind,y):
+def forecast_gad(measure, dw_ind, wm_ind, y):
     plt.style.use('fivethirtyeight')
 
-    forecast_date_start = dt.datetime(2020, 5, 1)
+    #forecast_date_start = dt.datetime(2020, 5, 1)
+    forecast_date_start_ser = y
+    forecast_date_start_ser['date'] = (y.index.values)
+    forecast_date_start_before = forecast_date_start_ser['date'].iloc[-1]
+    forecast_month_before = calendar.monthrange(forecast_date_start_before.year, forecast_date_start_before.month)[1]
+    forecast_date_start = dt.datetime(forecast_date_start_before.year, forecast_date_start_before.month, 1) \
+                          + dt.timedelta(days=forecast_month_before)
+    #forecast_date_start = y.index.values.iloc[-1]
+
+    print(forecast_date_start)
     count_of_forecast_steps = 1
 
     k = calendar.monthrange(forecast_date_start.year, forecast_date_start.month)

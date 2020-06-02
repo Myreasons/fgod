@@ -6,9 +6,9 @@ import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import numpy as np
 import xlsxwriter
 import os
+import datetime as dt
 
 
 
@@ -42,16 +42,20 @@ class Main(tk.Frame):
     Forecast_AHT = pd.DataFrame
     Forecast = pd.DataFrame
     end_path = ''
+    forecast_len = 1
+    ind_start = dt.datetime(2019,1,1)
 
 
     def get_ind(self):
         plt.style.use('fivethirtyeight')
         mpl.rcParams['lines.linewidth'] = 0.5
+        print('HELLO')
+        print(Main.ind_start)
 
-        Main.day_indexes = SARIMA.dw_indexes(y=Main.df_vol_clear, measure='Clear VOL_ACT')
-        Main.day_indexes_aht = SARIMA.dw_indexes(y=Main.df_aht_clear, measure='Clear AHT_ACT')
-        Main.week_indexes = SARIMA.wm_indexes(y=Main.df_vol_clear, measure='Clear VOL_ACT')
-        Main.week_indexes_aht = SARIMA.dw_indexes(y=Main.df_aht_clear, measure='Clear AHT_ACT')
+        Main.day_indexes = SARIMA.dw_indexes(y=Main.df_vol_clear, measure='Clear VOL_ACT', start_date=Main.ind_start)
+        Main.day_indexes_aht = SARIMA.dw_indexes(y=Main.df_aht_clear, measure='Clear AHT_ACT', start_date=Main.ind_start)
+        Main.week_indexes = SARIMA.wm_indexes(y=Main.df_vol_clear, measure='Clear VOL_ACT', start_date=Main.ind_start)
+        Main.week_indexes_aht = SARIMA.dw_indexes(y=Main.df_aht_clear, measure='Clear AHT_ACT', start_date=Main.ind_start)
 
         Main.df_for_sarima = Main.df_vol_clear
 
@@ -168,9 +172,6 @@ class Main(tk.Frame):
         ax1.set_title('Очистка AHT')
         ax1.clear
 
-
-
-
     def init_main(self):
 
         toolbar = tk.Frame(bg='#d7d8e0', bd=2)
@@ -206,7 +207,6 @@ class Main(tk.Frame):
         tk.Button(toolbar, text='NEXT', command=self.ivoke_handler, bg='#d7d8e0', bd=0,
           compound=tk.TOP).pack(side=tk.LEFT)
 
-
     def open_dialog(self):
         Child()
 
@@ -215,7 +215,6 @@ class Main(tk.Frame):
             self._buisnessLogicHandlers[self._currentHandler]()
             self._currentHandler = self._currentHandler + 1
 
-
 class Child(tk.Toplevel):
     def __init__(self):
         super().__init__(root)
@@ -223,6 +222,8 @@ class Child(tk.Toplevel):
 
     def start(self,event):
         #Main.clear_monitor(self)
+
+        Main.ind_start = self.index_start.get()
 
         if self.combobox.get() == "Изоляция Леса":
 
@@ -241,6 +242,7 @@ class Child(tk.Toplevel):
         Main.df11 = fg.starter(self.entry_path.get())
         Main.step = Main.cleaner
         Main.end_path = self.exit_path.get()
+        Main.forecast_len = self.forecast_start
 
         #Main.clean_method = fg.isolation_forest_anomaly_detection
 
@@ -270,15 +272,9 @@ class Child(tk.Toplevel):
 
         print(Main.step)
 
-
-
-
-
-
-
     def init_child(self):
         self.title('Настройки')
-        self.geometry('400x220+400+300')
+        self.geometry('600x320+400+300')
         self.resizable(False, False)
         self.value = pd.DataFrame
 
@@ -288,16 +284,28 @@ class Child(tk.Toplevel):
         label_select.place(x=50, y=80)
         label_exp = tk.Label(self, text='Экспортировать в')
         label_exp.place(x=50, y=110)
+        label_calendar = tk.Label(self, text='Индексы с:')
+        label_calendar.place(x=50, y=140)
+        label_forecast = tk.Label(self, text='Длина прогноза (мес)')
+        label_forecast.place(x=50, y=170)
 
-        self.exit_path = ttk.Entry(self)
-        self.exit_path.place(x=200, y=50)
+        self.exit_path = ttk.Entry(self, width=60)
+        self.entry_path = ttk.Entry(self, width=60)
+        self.entry_path.place(x=200, y=50)
+        self.exit_path.place(x=200, y=110)
+
+        self.forecast_start = ttk.Entry(self, width=60)
+        self.forecast_start.place(x=200, y=170)
+        self.forecast_start.insert(0, 1)
 
 
-        self.entry_path = ttk.Entry(self)
-        self.entry_path.place(x=200, y=110)
 
         self.entry_path.insert(0, r'C:\Users\aleksandr_balov\Desktop\fgod\venv\datas.xlsx')
         self.exit_path.insert(0,r'C:\Users\aleksandr_balov\Desktop')
+
+        self.index_start = ttk.Entry(self, width=60)
+        self.index_start.place(x=200, y=140)
+        self.index_start.insert(0, dt.datetime(2019, 1, 1).date())
 
 
         self.combobox = ttk.Combobox(self, values=[u"Изоляция Леса", u"Фильтр нижних частот"])
@@ -305,10 +313,10 @@ class Child(tk.Toplevel):
         self.combobox.place(x=200, y=80)
 
         btn_cancel = ttk.Button(self, text='Закрыть', command=self.destroy)
-        btn_cancel.place(x=300, y=170)
+        btn_cancel.place(x=300, y=210)
 
         btn_ok = ttk.Button(self, text='Загрузить')
-        btn_ok.place(x=220, y=170)
+        btn_ok.place(x=220, y=210)
 
 
         btn_ok.bind('<Button-1>',func = self.start)
@@ -316,10 +324,6 @@ class Child(tk.Toplevel):
 
         self.grab_set()
         self.focus_set()
-
-
-
-
 
 if __name__ == "__main__":
     root = tk.Tk()
