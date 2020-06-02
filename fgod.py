@@ -15,8 +15,9 @@ pd.options.mode.chained_assignment = None
 
 plt.style.use('fivethirtyeight')
 
-def starter():
-    file = 'datas.xlsx'
+def starter(path):
+    #file = 'datas.xlsx'
+    file = path
     y = pd.read_excel(file, index_col=0)
     y = y.fillna(y.bfill())
     return y

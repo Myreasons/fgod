@@ -7,12 +7,24 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
+import xlsxwriter
+import os
+
+
+
 plt.style.use('fivethirtyeight')
 mpl.rcParams['lines.linewidth'] = 0.5
 
 class Main(tk.Frame):
     def __init__(self, root):
         super().__init__(root)
+        self._buisnessLogicHandlers = [
+            self.cleaner,
+            self.cleaner_aht,
+            self.get_ind,
+            self.save_n_exit
+        ]
+        self._currentHandler = 0
         self.init_main()
 
     clean_method = ''
@@ -29,12 +41,8 @@ class Main(tk.Frame):
     Forecast_Volume = pd.DataFrame
     Forecast_AHT = pd.DataFrame
     Forecast = pd.DataFrame
+    end_path = ''
 
-
-    def init_next(self):
-        next_button = tk.Button(text='next!', command=self.open_dialog, bg='#d7d8e0', bd=0,
-                                    compound=Main.step)
-        next_button.pack(side=tk.LEFT)
 
     def get_ind(self):
         plt.style.use('fivethirtyeight')
@@ -82,16 +90,15 @@ class Main(tk.Frame):
 
         ax1.set_title('Прогноз')
 
-
-
-
-
-
-
-
     monitor = FigureCanvasTkAgg
 
-    #monitor1 = FigureCanvasTkAgg
+    def save_n_exit(self):
+        writer = pd.ExcelWriter('forecast.xlsx', engine='xlsxwriter')
+        Main.Forecast.to_excel(writer, 'Forecast')
+        os.chdir(Main.end_path)
+        writer.save()
+        self.clear_monitor()
+
 
     def clear_monitor(self):
 
@@ -103,10 +110,6 @@ class Main(tk.Frame):
             Main.monitor.get_tk_widget().pack_forget()
         except AttributeError:
             pass
-
-
-
-
 
     def cleaner(self):
         self.clear_monitor()
@@ -180,7 +183,7 @@ class Main(tk.Frame):
                                     compound=tk.TOP)
         btn_open_dialog.pack(side=tk.LEFT)
 
-
+        '''
         cleanb = tk.Button(toolbar, text='Очистка звонков', command=self.cleaner, bg='#d7d8e0', bd=0,
                                     compound=tk.TOP)
         cleanb.pack(side=tk.LEFT)
@@ -189,18 +192,28 @@ class Main(tk.Frame):
                           compound=tk.TOP)
         cleanba.pack(side=tk.LEFT)
 
-        cleanall = tk.Button(toolbar, text='Очистка dall', command=self.clear_monitor, bg='#d7d8e0', bd=0,
+        cleanall = tk.Button(toolbar, text='Очистка all', command=self.clear_monitor, bg='#d7d8e0', bd=0,
                             compound=tk.TOP)
         cleanall.pack(side=tk.LEFT)
 
         cleanall = tk.Button(toolbar, text='NEW OPT', command=self.get_ind, bg='#d7d8e0', bd=0,
                              compound=tk.TOP)
-        cleanall.pack(side=tk.LEFT)
 
+
+
+        cleanall.pack(side=tk.LEFT)'''
+
+        tk.Button(toolbar, text='NEXT', command=self.ivoke_handler, bg='#d7d8e0', bd=0,
+          compound=tk.TOP).pack(side=tk.LEFT)
 
 
     def open_dialog(self):
         Child()
+
+    def ivoke_handler(self):
+        if self._currentHandler < len(self._buisnessLogicHandlers):
+            self._buisnessLogicHandlers[self._currentHandler]()
+            self._currentHandler = self._currentHandler + 1
 
 
 class Child(tk.Toplevel):
@@ -219,17 +232,15 @@ class Child(tk.Toplevel):
 
         else:
             Main.clean_method = ''
+        if self.entry_path != '':
+            Main.starter_path = self.entry_path
+        else:
+            Main.starter_path = r'C:\Users\aleksandr_balov\Desktop\fgod\venv\datas.xlsx'
+        self.value = fg.starter(self.entry_path.get())
 
-
-
-
-
-
-
-
-        self.value = fg.starter()
-        Main.df11 = fg.starter()
+        Main.df11 = fg.starter(self.entry_path.get())
         Main.step = Main.cleaner
+        Main.end_path = self.exit_path.get()
 
         #Main.clean_method = fg.isolation_forest_anomaly_detection
 
@@ -278,14 +289,18 @@ class Child(tk.Toplevel):
         label_exp = tk.Label(self, text='Экспортировать в')
         label_exp.place(x=50, y=110)
 
-        self.entry_description = ttk.Entry(self)
-        self.entry_description.place(x=200, y=50)
+        self.exit_path = ttk.Entry(self)
+        self.exit_path.place(x=200, y=50)
 
-        self.entry_money = ttk.Entry(self)
-        self.entry_money.place(x=200, y=110)
 
-        self.combobox = ttk.Combobox(self, values=[u"Изоляция Леса", u"Фильтр нижних частот",
-                                                   u'Без очистки выбросов'])
+        self.entry_path = ttk.Entry(self)
+        self.entry_path.place(x=200, y=110)
+
+        self.entry_path.insert(0, r'C:\Users\aleksandr_balov\Desktop\fgod\venv\datas.xlsx')
+        self.exit_path.insert(0,r'C:\Users\aleksandr_balov\Desktop')
+
+
+        self.combobox = ttk.Combobox(self, values=[u"Изоляция Леса", u"Фильтр нижних частот"])
         self.combobox.current(0)
         self.combobox.place(x=200, y=80)
 
@@ -297,7 +312,6 @@ class Child(tk.Toplevel):
 
 
         btn_ok.bind('<Button-1>',func = self.start)
-
 
 
         self.grab_set()
