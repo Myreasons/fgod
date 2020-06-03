@@ -44,13 +44,13 @@ class Main(tk.Frame):
     end_path = ''
     forecast_len = 1
     ind_start = dt.datetime(2019,1,1)
+    forecast_end_date = dt.datetime(2020,12,31)
 
 
     def get_ind(self):
         plt.style.use('fivethirtyeight')
         mpl.rcParams['lines.linewidth'] = 0.5
-        print('HELLO')
-        print(Main.ind_start)
+
 
         Main.day_indexes = SARIMA.dw_indexes(y=Main.df_vol_clear, measure='Clear VOL_ACT', start_date=Main.ind_start)
         Main.day_indexes_aht = SARIMA.dw_indexes(y=Main.df_aht_clear, measure='Clear AHT_ACT', start_date=Main.ind_start)
@@ -65,13 +65,14 @@ class Main(tk.Frame):
 
 
         Main.Forecast_Volume = SARIMA.forecast_gad('Clear VOL_ACT',Main.day_indexes,Main.week_indexes,
-                                                  Main.df_for_sarima)
+                                                  Main.df_for_sarima, ender=Main.forecast_end_date)
 
         Main.Forecast_AHT = SARIMA.forecast_gad('Clear AHT_ACT', Main.day_indexes_aht, Main.week_indexes_aht,
-                                                   Main.df_for_sarima)
+                                                   Main.df_for_sarima, ender=Main.forecast_end_date)
 
         Main.Forecast = Main.Forecast_Volume
         Main.Forecast['AHT']=Main.Forecast_AHT['Volume']
+        Main.Forecast = Main.Forecast.drop(['Month','len'], axis=1)
 
         print(Main.Forecast_Volume)
         self.clear_monitor()
@@ -224,6 +225,7 @@ class Child(tk.Toplevel):
         #Main.clear_monitor(self)
 
         Main.ind_start = self.index_start.get()
+        Main.forecast_end_date = self.forecast_start.get()
 
         if self.combobox.get() == "Изоляция Леса":
 
@@ -280,13 +282,13 @@ class Child(tk.Toplevel):
 
         label_description = tk.Label(self, text='Путь к файлу:')
         label_description.place(x=50, y=50)
-        label_select = tk.Label(self, text='Метод очистки')
+        label_select = tk.Label(self, text='Метод очистки:')
         label_select.place(x=50, y=80)
-        label_exp = tk.Label(self, text='Экспортировать в')
+        label_exp = tk.Label(self, text='Экспортировать в:')
         label_exp.place(x=50, y=110)
         label_calendar = tk.Label(self, text='Индексы с:')
         label_calendar.place(x=50, y=140)
-        label_forecast = tk.Label(self, text='Длина прогноза (мес)')
+        label_forecast = tk.Label(self, text='Создать прогноз до:')
         label_forecast.place(x=50, y=170)
 
         self.exit_path = ttk.Entry(self, width=60)
@@ -296,7 +298,7 @@ class Child(tk.Toplevel):
 
         self.forecast_start = ttk.Entry(self, width=60)
         self.forecast_start.place(x=200, y=170)
-        self.forecast_start.insert(0, 1)
+        self.forecast_start.insert(0, dt.datetime(2020,12,31).date())
 
 
 

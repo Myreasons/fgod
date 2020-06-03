@@ -2,11 +2,27 @@ import warnings
 import itertools
 import pandas as pd
 import statsmodels.api as sm
-import matplotlib.pyplot as plt
 import functions_analyse as fa
 import datetime as dt
 import calendar
 import statistics
+
+def len_of_month(date):
+    len_m = calendar.monthrange(date.year, date.month)[1]
+    return (len_m)
+
+
+def months_between(start,end):
+    months = []
+    cursor = start
+
+    while cursor <= end:
+        if cursor.month not in months:
+            months.append(cursor.month)
+        cursor += dt.timedelta(weeks=1)
+
+    return months
+
 
 measure = 'VOL_ACT'
 #measure = 'AHT_ACT'
@@ -57,9 +73,10 @@ def wm_indexes(y, measure, start_date):
     return(wm_ind)
 
 
-def forecast_gad(measure, dw_ind, wm_ind, y):
-    plt.style.use('fivethirtyeight')
+def forecast_gad(measure, dw_ind, wm_ind, y, ender):
 
+    #my_day = dt.datetime(2020,7,30)
+    my_day = dt.datetime.strptime(ender, '%Y-%m-%d')
     #forecast_date_start = dt.datetime(2020, 5, 1)
     forecast_date_start_ser = y
     forecast_date_start_ser['date'] = (y.index.values)
@@ -68,22 +85,33 @@ def forecast_gad(measure, dw_ind, wm_ind, y):
     forecast_date_start = dt.datetime(forecast_date_start_before.year, forecast_date_start_before.month, 1) \
                           + dt.timedelta(days=forecast_month_before)
     #forecast_date_start = y.index.values.iloc[-1]
+    #periods = months_between(forecast_date_start, dt.datetime(2020,7,1))
 
-    print(forecast_date_start)
-    count_of_forecast_steps = 1
 
-    k = calendar.monthrange(forecast_date_start.year, forecast_date_start.month)
-    forecast_month = pd.DataFrame(index=pd.date_range(forecast_date_start, periods=k[1]).tolist())
+
+    periodss = my_day - forecast_date_start
+    periodss = str(periodss)
+    periodss = int(periodss.split()[0])
+
+
+
+    count_of_forecast_steps = len(months_between(forecast_date_start, my_day))
+    print(count_of_forecast_steps)
+    print('here it is')
+
+    #k = calendar.monthrange(forecast_date_start.year, forecast_date_start.month)
+    '''    forecast_month = pd.DataFrame(index=pd.date_range(forecast_date_start, periods=periodss).tolist())
+    print(forecast_month)
     forecast_month['week_num'] = forecast_month.index.values
     forecast_month['week_num'] = forecast_month['week_num'].dt.day // 7 + 1
     forecast_month['week_day'] = forecast_month.index.values
-    forecast_month['week_day'] = forecast_month['week_day'].dt.dayofweek
+    forecast_month['week_day'] = forecast_month['week_day'].dt.dayofweek'''
 
 
 
-    k = calendar.monthrange(forecast_date_start.year, forecast_date_start.month)
+    #k = calendar.monthrange(forecast_date_start.year, forecast_date_start.month)
 
-    forecast_month = pd.DataFrame(index=pd.date_range(forecast_date_start, periods=k[1]).tolist())
+    forecast_month = pd.DataFrame(index=pd.date_range(forecast_date_start, periods=periodss).tolist())
     forecast_month['week_num'] = forecast_month.index.values
     forecast_month['week_num'] = forecast_month['week_num'].dt.day // 7 + 1
     forecast_month['week_day'] = forecast_month.index.values
@@ -95,10 +123,11 @@ def forecast_gad(measure, dw_ind, wm_ind, y):
     else:
         y['Clear AHT_ACT'] = y['Clear VOL_ACT'] * y['Clear AHT_ACT']
         y = y['Clear AHT_ACT'].resample('MS').sum()/y['Clear VOL_ACT'].resample('MS').sum()
-
+    print('her')
+    print(forecast_month)
 
     tester = fa.kdf(y,ttl = measure)
-    # y_as = fa.anti_stac(y)
+    # y_as = fa.anti_stac(y) #попытка преобразования ряда к стационарному!
     y_as = y
 
     # Define the p, d and q parameters to take any value between 0 and 2
@@ -238,15 +267,31 @@ def forecast_gad(measure, dw_ind, wm_ind, y):
         month_vol_average = (pred_ci['lower Clear VOL_ACT'] + pred_ci['upper Clear VOL_ACT']) / 2
     else:
         month_vol_average = (pred_ci['lower y'] + pred_ci['upper y']) / 2
-    mva = pd.to_numeric(month_vol_average.values, errors='coerce').sum()
 
+
+    mva = pd.to_numeric(month_vol_average.values, errors='coerce').mean()
+
+    forecast_month['Month'] = pd.to_datetime(forecast_month.index.values)
+    for datas in forecast_month['Month']:
+        forecast_month['Month'].loc[datas] = pd.datetime(forecast_month['Month'].loc[datas].year,forecast_month['Month'].loc[datas].month, 1)
+
+    i = 0
+    
+    forecast_month['Volume'] = 1
+    forecast_month['len'] = 30
+    for days in forecast_month['Month']:
+        forecast_month['len'].loc[days]=len_of_month(days)
 
 
     if measure == "Clear VOL_ACT":
-        forecast_month['Volume'] = mva / len(forecast_month)
+        for days in forecast_month['Month']:
+            forecast_month['Volume'].iloc[i] = month_vol_average.loc[days]/forecast_month['len'].iloc[i]
+            i+=1
     else:
-        forecast_month['Volume'] = mva
-
+        for days in forecast_month['Month']:
+            forecast_month['Volume'].iloc[i] = month_vol_average.loc[days]
+            i+=1
+   
     forecast_month['week_day_ind'] = 1
     forecast_month['week_num_ind'] = 1
 

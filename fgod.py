@@ -1,4 +1,3 @@
-import matplotlib.pyplot as plt
 import warnings
 import itertools
 import statsmodels.api as sm
@@ -13,7 +12,7 @@ from sklearn.svm import OneClassSVM
 
 pd.options.mode.chained_assignment = None
 
-plt.style.use('fivethirtyeight')
+
 
 def starter(path):
     #file = 'datas.xlsx'
@@ -21,13 +20,13 @@ def starter(path):
     y = pd.read_excel(file, index_col=0)
     y = y.fillna(y.bfill())
     return y
-
+'''
 def cleaner():
     file = '2clean.xlsx'
     y = pd.read_excel(file, index_col=0)
     return y
 
-
+'''
 """
 Простой фильтр нижних частот: взятие скользящего среднего и устранение аномалий на основе Z-показателя
 """
