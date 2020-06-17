@@ -17,9 +17,17 @@ pd.options.mode.chained_assignment = None
 def starter(path):
     #file = 'datas.xlsx'
     file = path
-    y = pd.read_excel(file, index_col=0)
+    y = pd.read_excel(file, index_col=0, sheet_name = 'report')
+    y = y.fillna(y.bfill())
+
+    return y
+
+def hollidays_search(path):
+    file = path
+    y = pd.read_excel(file, index_col=0, sheet_name = 'hollidays')
     y = y.fillna(y.bfill())
     return y
+
 '''
 def cleaner():
     file = '2clean.xlsx'
@@ -31,7 +39,7 @@ def cleaner():
 Простой фильтр нижних частот: взятие скользящего среднего и устранение аномалий на основе Z-показателя
 """
 def low_pass_filter_anomaly_detection(event, df,
-                                      column_name):
+                                      column_name,hl):
 
     """
     Implement a low-pass filter to detect anomalies in a time series, and save the filter outputs
@@ -63,7 +71,7 @@ def low_pass_filter_anomaly_detection(event, df,
     #df['Cleaned']=np.where(df['VOL_ACT_Low_Pass_Filter_Anomaly'] == True, datetime(2019,2,2),df['VOL_ACT'])
     df['Clear '+column_name]=df[column_name]
     for ind in df.index.values:
-        if df['Filter_Anomaly'].loc[ind]  == True:
+        if (df['Filter_Anomaly'].loc[ind]  == True) and not(ind in hl.index.values):
             df['Clear '+column_name].loc[ind] = fa.P_clean(df, ind, column_name)
 
     df = df.drop([column_name+'_Rolling_StDev',column_name+'_Rolling_Average'], axis = 1)
@@ -75,7 +83,7 @@ def low_pass_filter_anomaly_detection(event, df,
 """Изоляция Леса"""
 
 def isolation_forest_anomaly_detection(event, df,
-                                       column_name):
+                                       column_name, hl):
     """
     In this definition, time series anomalies are detected using an Isolation Forest algorithm.
     Arguments:
@@ -99,7 +107,8 @@ def isolation_forest_anomaly_detection(event, df,
     df[isolation_forest_anomaly_column] = df[isolation_forest_anomaly_column].map( {1: False, -1: True} )
     df['Clear '+column_name] = df[column_name]
     for ind in df.index.values:
-        if df['Filter_Anomaly'].loc[ind]  == True:
+
+        if (df['Filter_Anomaly'].loc[ind]  == True) and not(ind in hl.index.values):
             df['Clear '+column_name].loc[ind] = fa.P_clean(df,ind,column_name)
 
 

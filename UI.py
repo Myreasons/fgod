@@ -39,6 +39,7 @@ class Main(tk.Frame):
     day_indexes_aht = pd.DataFrame
     week_indexes_aht = pd.DataFrame
     Forecast_Volume = pd.DataFrame
+    Hollidays = pd.DataFrame
     Forecast_AHT = pd.DataFrame
     Forecast = pd.DataFrame
     end_path = ''
@@ -65,10 +66,10 @@ class Main(tk.Frame):
 
 
         Main.Forecast_Volume = SARIMA.forecast_gad('Clear VOL_ACT',Main.day_indexes,Main.week_indexes,
-                                                  Main.df_for_sarima, ender=Main.forecast_end_date)
+                                                  Main.df_for_sarima, ender=Main.forecast_end_date, hl = self.Hollidays)
 
         Main.Forecast_AHT = SARIMA.forecast_gad('Clear AHT_ACT', Main.day_indexes_aht, Main.week_indexes_aht,
-                                                   Main.df_for_sarima, ender=Main.forecast_end_date)
+                                                   Main.df_for_sarima, ender=Main.forecast_end_date, hl = self.Hollidays)
 
         Main.Forecast = Main.Forecast_Volume
         Main.Forecast['AHT']=Main.Forecast_AHT['Volume']
@@ -94,11 +95,13 @@ class Main(tk.Frame):
         Main.Forecast['AHT'].plot(legend=False, ax=newax, color='red')
 
         ax1.set_title('Прогноз')
+        #next_but.configure(text = 'Save')
 
     monitor = FigureCanvasTkAgg
 
     def save_n_exit(self):
         writer = pd.ExcelWriter('forecast.xlsx', engine='xlsxwriter')
+        Main.Forecast = Main.Forecast.drop(['Date'], axis = 1)
         Main.Forecast.to_excel(writer, 'Forecast')
         os.chdir(Main.end_path)
         writer.save()
@@ -120,7 +123,7 @@ class Main(tk.Frame):
         self.clear_monitor()
         #ax1.clear()
 
-        rez = self.clean_method(self.df11, 'VOL_ACT')
+        rez = self.clean_method(self.df11, 'VOL_ACT',self.Hollidays)
         #rez = rez.drop(['AHT_ACT', 'Filter_Anomaly'], axis = 1)
         rez = rez.loc[:,rez.columns.isin(['VOL_ACT','Clear VOL_ACT','Filter_Anomaly'])]
 
@@ -151,7 +154,7 @@ class Main(tk.Frame):
     def cleaner_aht(self):
 
         self.clear_monitor()
-        rez2 = self.clean_method(self.df11, 'AHT_ACT')
+        rez2 = self.clean_method(self.df11, 'AHT_ACT',self.Hollidays)
         #rez2 = rez2.drop(['VOL_ACT','Filter_Anomaly','Clear VOL_ACT'], axis = 1)
         #print(rez2)
         rez2 = rez2.loc[:, rez2.columns.isin(['AHT_ACT', 'Clear AHT_ACT','Filter_Anomaly'])]
@@ -205,8 +208,9 @@ class Main(tk.Frame):
 
         cleanall.pack(side=tk.LEFT)'''
 
-        tk.Button(toolbar, text='NEXT', command=self.ivoke_handler, bg='#d7d8e0', bd=0,
-          compound=tk.TOP).pack(side=tk.LEFT)
+        next_but = tk.Button(toolbar, text='NEXT', command=self.ivoke_handler, bg='#d7d8e0', bd=0,
+          compound=tk.TOP)
+        next_but.pack(side=tk.LEFT)
 
     def open_dialog(self):
         Child()
@@ -224,8 +228,10 @@ class Child(tk.Toplevel):
     def start(self,event):
         #Main.clear_monitor(self)
 
+
         Main.ind_start = self.index_start.get()
         Main.forecast_end_date = self.forecast_start.get()
+
 
         if self.combobox.get() == "Изоляция Леса":
 
@@ -242,6 +248,7 @@ class Child(tk.Toplevel):
         self.value = fg.starter(self.entry_path.get())
 
         Main.df11 = fg.starter(self.entry_path.get())
+        Main.Hollidays = fg.hollidays_search(self.entry_path.get())
         Main.step = Main.cleaner
         Main.end_path = self.exit_path.get()
         Main.forecast_len = self.forecast_start
@@ -272,7 +279,8 @@ class Child(tk.Toplevel):
 
         ax1.set_title('Исходные данные')
 
-        print(Main.step)
+        #print(Main.step)
+        self.destroy()
 
     def init_child(self):
         self.title('Настройки')

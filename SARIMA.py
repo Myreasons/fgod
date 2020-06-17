@@ -6,6 +6,7 @@ import functions_analyse as fa
 import datetime as dt
 import calendar
 import statistics
+import  numpy as np
 
 def len_of_month(date):
     len_m = calendar.monthrange(date.year, date.month)[1]
@@ -73,7 +74,7 @@ def wm_indexes(y, measure, start_date):
     return(wm_ind)
 
 
-def forecast_gad(measure, dw_ind, wm_ind, y, ender):
+def forecast_gad(measure, dw_ind, wm_ind, y, ender, hl):
 
     #my_day = dt.datetime(2020,7,30)
     my_day = dt.datetime.strptime(ender, '%Y-%m-%d')
@@ -96,8 +97,8 @@ def forecast_gad(measure, dw_ind, wm_ind, y, ender):
 
 
     count_of_forecast_steps = len(months_between(forecast_date_start, my_day))
-    print(count_of_forecast_steps)
-    print('here it is')
+
+
 
     #k = calendar.monthrange(forecast_date_start.year, forecast_date_start.month)
     '''    forecast_month = pd.DataFrame(index=pd.date_range(forecast_date_start, periods=periodss).tolist())
@@ -117,14 +118,14 @@ def forecast_gad(measure, dw_ind, wm_ind, y, ender):
     forecast_month['week_day'] = forecast_month.index.values
     forecast_month['week_day'] = forecast_month['week_day'].dt.dayofweek
 
-
+    y_for_holldays = y
     if measure == 'Clear VOL_ACT':
         y = y['Clear VOL_ACT'].resample('MS').sum()
     else:
         y['Clear AHT_ACT'] = y['Clear VOL_ACT'] * y['Clear AHT_ACT']
         y = y['Clear AHT_ACT'].resample('MS').sum()/y['Clear VOL_ACT'].resample('MS').sum()
-    print('her')
-    print(forecast_month)
+
+    #print(forecast_month)
 
     tester = fa.kdf(y,ttl = measure)
     # y_as = fa.anti_stac(y) #попытка преобразования ряда к стационарному!
@@ -236,11 +237,11 @@ def forecast_gad(measure, dw_ind, wm_ind, y, ender):
 
     # Extract the predicted and true values of our time series
     y_forecasted = pred_dynamic.predicted_mean
-    y_truth = y['2020':]
+    #y_truth = y['2020':]
 
     # Compute the mean square error
     # mse = ((y_forecasted - y_truth) ** 2).mean()
-    mse = statistics.stdev(y_forecasted - y_truth)
+    #mse = statistics.stdev(y_forecasted - y_truth)
 
     #print('The Mean Squared Error of our forecasts is {}'.format((round(mse, 2))))
 
@@ -305,6 +306,35 @@ def forecast_gad(measure, dw_ind, wm_ind, y, ender):
 
 
     forecast_month = forecast_month.drop(['week_num', 'week_day', 'week_day_ind', 'week_num_ind'], axis=1)
+
+
+
+    if measure == "Clear VOL_ACT":
+        new_fm = forecast_month
+        y_for_holldays = y_for_holldays.join(hl, lsuffix='_caller', rsuffix='_other')
+        y_for_holldays = pd.pivot_table(y_for_holldays, values=['Clear VOL_ACT'], index=['Событие'],
+                                        aggfunc=np.mean)
+        print(y_for_holldays)
+        new_fm['Date'] = new_fm.index.values
+        new_fm = new_fm.join(hl, lsuffix='_caller', rsuffix='_other')
+        new_fm = new_fm.set_index('Событие').join(y_for_holldays, lsuffix='_caller', rsuffix='_other')
+        new_fm = new_fm.set_index('Date')
+        for ind in new_fm.index.values:
+            if not pd.isnull(new_fm.loc[ind]['Clear VOL_ACT']) :
+                new_fm.at[ind, 'Volume'] = new_fm.loc[ind]['Clear VOL_ACT']
+        new_fm.index.name = ''
+        new_fm = new_fm.drop(['Clear VOL_ACT'], axis = 1)
+        forecast_month['Volume'] = new_fm['Volume']
+
+
+
+
+
+
+
+
+
+
     '''
     forecast_month.plot(figsize=(15, 6))
     plt.show()
